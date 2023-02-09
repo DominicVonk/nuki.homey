@@ -71,18 +71,10 @@ class SmartLockDevice extends NukiDevice {
           return Promise.resolve();
         }
         else {
-          let action = ACTION_UNLOCK;
-
-          const open_action_visible_setting = this.getSettings('open_action_visible');
-          if (open_action_visible_setting !== null) {
-            if (open_action_visible_setting) {
-              action = ACTION_UNLATCH;
-            }
-          }
           // Unlock action.
           if (this.progressingAction > 0) {
             // An action is already in progress.
-            if (this.progressingAction == action) {
+            if (this.progressingAction == ACTION_UNLOCK) {
               // An action that leads to Unlock state is already in progress.
               this.log('An action that leads to Unlock state is already in progress');
               await this.progressingActionDone();
@@ -93,14 +85,14 @@ class SmartLockDevice extends NukiDevice {
               return Promise.reject(new Error('A different action is already in progress'));
             }
           }
-          this.progressingAction = action;
+          this.progressingAction = ACTION_UNLOCK;
           // It seems that, even if result.success is false, the action is
           //  performed correctly by Nuki. For that resons the "result" object
           //  of sendRequest() method is not evaluated.
           await this.bridge.sendRequest('lockAction', [
             ['nukiId', this.getData().id],
             ['deviceType', 0],
-            ['action', action]
+            ['action', ACTION_UNLOCK]
           ], 16000);
           this.log('Unlock done');
           this.progressingAction = 0;
@@ -266,7 +258,7 @@ class SmartLockDevice extends NukiDevice {
             this.setCapabilityValue('locked', false);
             flow.getDeviceTriggerCard('nuki_state_changed').trigger(this, prevArg, {});
             flow.getDeviceTriggerCard('lockstateChanged').trigger(this, { lockstate: unlatchingStr }, {});
-            // Safety timer that can automatically restore the current status 
+            // Safety timer that can automatically restore the current status
             //  after a while, if the event from Opener is missed.
             this._openingTimer = setTimeout(() => this._restoreStatusBeforeOpening(prevArg.previous_state), 24000);
             await this.progressingActionDone();
@@ -400,7 +392,7 @@ class SmartLockDevice extends NukiDevice {
         this._unlockStateEvent.emit('done');
       }
     }
-    // Update capability nuki_state. 
+    // Update capability nuki_state.
     nukiState = state;
     if (state != this.getCapabilityValue('nuki_state')) {
       this.setCapabilityValue('nuki_state', nukiState);
@@ -441,7 +433,7 @@ class SmartLockDevice extends NukiDevice {
     // Update capability lockstate & trigger deprecated lockstateChanged flow card.
     this.setCapabilityValue('lockstate', baseState);
     flow.getDeviceTriggerCard('lockstateChanged').trigger(this, { lockstate: baseState }, {});
-    // Update capability nuki_state and trigger nuki_state_changed flow card. 
+    // Update capability nuki_state and trigger nuki_state_changed flow card.
     const nukiState = baseState;
     this.setCapabilityValue('nuki_state', nukiState);
     flow.getDeviceTriggerCard('nuki_state_changed').trigger(this, {
